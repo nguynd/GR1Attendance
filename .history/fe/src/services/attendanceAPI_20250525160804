@@ -1,0 +1,17 @@
+import axios from "axios";
+
+const BASE_URL = "http://localhost:5000/api";
+
+// ✅ Lấy danh sách điểm danh theo class_id và ngày
+export const getAttendanceDatesByClass = async (classId, date) => {
+  const res = await axios.get(`${BASE_URL}/attendances/${classId}`, {
+    params: { date },
+  });
+  return res.data;
+};
+
+// ✅ Lấy danh sách ngày điểm danh
+export const getAttendanceDates = async (classId) => {
+  const res = await axios.get(`${BASE_URL}/attendances/dates/${classId}`);
+  return res.data;
+};
