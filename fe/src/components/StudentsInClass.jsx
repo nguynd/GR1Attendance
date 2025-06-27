@@ -13,6 +13,8 @@ import {
   getAttendanceByClass,
   initAttendanceByClass,
   markAttendance,
+  getAbsentDatesByStudent,
+  restoreAttendance 
 } from "../services/attendanceAPI";
 import { ArrowLeft, Plus } from "lucide-react";
 
@@ -27,6 +29,11 @@ export default function StudentsInClass() {
   const [previewStudents, setPreviewStudents] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const studentsPerPage = 10;
+  const [absentDates, setAbsentDates] = useState([]);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [selectedStudentModal, setSelectedStudentModal] = useState(null);
+  const [isAbsentModalOpen, setIsAbsentModalOpen] = useState(false);
+
 
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -35,10 +42,27 @@ export default function StudentsInClass() {
     birth_date: "",
     class_id: id,
   });
+  const formatDatePure = (isoDate) => {
+    if (!isoDate) return "";
+    const [year, month, day] = isoDate.split("T")[0].split("-");
+    return `${day}/${month}/${year}`;
+  };
 
   const [dates, setDates] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [attendanceStatus, setAttendanceStatus] = useState(new Map());
+
+const handleClickPresentCount = async (student) => {
+  try {
+    const data = await getAbsentDatesByStudent(id, student.student_id);
+    setAbsentDates(data);
+    setSelectedStudentModal(student);
+    setIsAbsentModalOpen(true);
+  } catch (err) {
+    console.error("Lỗi khi tải danh sách buổi vắng:", err);
+  }
+};
+
 
   const fetchInitialData = async () => {
     try {
@@ -407,13 +431,17 @@ export default function StudentsInClass() {
                           className="w-6 h-6 accent-blue-600 rounded"
                         />
                       ) : (
-                        <>
+                        
+                         <span
+                          className="text-blue-600 underline cursor-pointer"
+                          onClick={() => handleClickPresentCount(sv)}
+                        >
                           {sv.appearance} / {sv.total_sessions} (
                           {sv.total_sessions > 0
                             ? Math.round((sv.appearance / sv.total_sessions) * 100)
                             : 0}
                           %)
-                        </>
+                        </span>
                       )}
                     </td>
                   </tr>
@@ -512,6 +540,57 @@ export default function StudentsInClass() {
           </div>
         </div>
       )}
+      {isAbsentModalOpen && (
+  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg p-6 w-[400px] max-h-[80vh] overflow-y-auto shadow-lg">
+      <h2 className="text-lg font-semibold mb-4">
+        Buổi vắng - {selectedStudentModal?.name}
+      </h2>
+
+      {absentDates.length === 0 ? (
+        <p>Sinh viên không vắng buổi nào.</p>
+      ) : (
+<ul className="list-disc list-inside space-y-1">
+  {absentDates.map((date, idx) => (
+    <li key={idx} className="flex justify-between items-center">
+      <span>{formatDate(date)}</span>
+      <button
+        onClick={async () => {
+           console.log("🧪 Gọi API Xóa:", {
+            classId: id,
+            studentId: selectedStudentModal.student_id,
+            date,
+          });
+          try {
+            await restoreAttendance(id, selectedStudentModal.student_id, date);
+            const updated = await getAbsentDatesByStudent(id, selectedStudentModal.student_id);
+            setAbsentDates(updated);
+            await fetchInitialData(); // cập nhật lại tổng quan
+          } catch (err) {
+            Swal.fire("Lỗi", "Không thể khôi phục điểm danh", "error");
+            console.error(err);
+          }
+        }}
+        className="ml-4 text-sm text-red-600 hover:text-red-800"
+      >
+        🗑 Xoá
+      </button>
+    </li>
+  ))}
+</ul>
+      )}
+
+      <div className="mt-4 text-right">
+        <button
+          onClick={() => setIsAbsentModalOpen(false)}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          Đóng
+        </button>
+      </div>
+    </div>
+  </div>
+  )}
     </div>
   );
 }

@@ -27,3 +27,27 @@ export const markAttendance = async (data) => {
   const res = await axios.post(`${BASE_URL}/attendances`, data);
   return res.data;
 };
+
+export const getAbsentDatesByStudent = async (classId, studentId) => {
+  try {
+    const res = await axios.get(
+      `${BASE_URL}/attendances/absent-dates/${classId}/${studentId}`
+    );
+    return res.data; // array các chuỗi yyyy-mm-dd
+  } catch (err) {
+    console.error("API lỗi khi lấy buổi vắng:", err);
+    return [];
+  }
+};
+
+  export const restoreAttendance = async (classId, studentId, date) => {
+    const res = await axios.put(`${BASE_URL}/attendances/restore`, {
+      classId,
+      studentId,
+      date,
+    });
+    return res.data;
+  };
+
+
+
